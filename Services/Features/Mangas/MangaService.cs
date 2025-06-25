@@ -13,38 +13,49 @@ namespace JaveragesLibrary.Services.Features.Mangas
             _context = context;
         }
 
-        // Obtener todos los mangas
-        public async Task<List<Manga>> GetAllAsync()
+        public async Task<IEnumerable<Manga>> GetAllMangasAsync()
         {
             return await _context.Mangas.ToListAsync();
         }
 
-        // Agregar nuevo manga
-        public async Task<Manga> AddAsync(Manga manga)
+        public async Task<Manga?> GetMangaByIdAsync(int id)
         {
-            var nuevo = new Manga
-            {
-                Titulo = manga.Titulo,
-                Autor = manga.Autor,
-                Capitulos = manga.Capitulos
-            };
-
-            _context.Mangas.Add(nuevo);
-            await _context.SaveChangesAsync();
-
-            return nuevo;
+            return await _context.Mangas.FindAsync(id);
         }
 
-        // Eliminar manga por ID
-        public async Task<bool> DeleteAsync(int id)
+        public async Task<Manga> CreateMangaAsync(Manga manga)
+        {
+            _context.Mangas.Add(manga);
+            await _context.SaveChangesAsync();
+            return manga;
+        }
+
+        public async Task UpdateMangaAsync(Manga manga)
+        {
+            _context.Entry(manga).State = EntityState.Modified;
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task DeleteMangaAsync(int id)
         {
             var manga = await _context.Mangas.FindAsync(id);
-            if (manga == null) return false;
+            if (manga != null)
+            {
+                _context.Mangas.Remove(manga);
+                await _context.SaveChangesAsync();
+            }
+        }
 
-            _context.Mangas.Remove(manga);
-            await _context.SaveChangesAsync();
+        public async Task<IEnumerable<Manga>> SearchMangasByTitleAsync(string titulo)
+        {
+            return await _context.Mangas
+                .Where(m => m.Titulo != null && m.Titulo.Contains(titulo))
+                .ToListAsync();
+        }
 
-            return true;
+        public async Task<bool> MangaExistsAsync(int id)
+        {
+            return await _context.Mangas.AnyAsync(m => m.Id == id);
         }
     }
-}
+}   

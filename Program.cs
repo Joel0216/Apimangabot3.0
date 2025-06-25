@@ -1,18 +1,52 @@
-using JaveragesLibrary.Data; // 👈 Asegúrate de tener este using
+using JaveragesLibrary.Data;
 using JaveragesLibrary.Services.Features.Mangas;
+using JaveragesLibrary.Services.Features.Prestamos;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 💾 Agrega la conexión a tu base de datos en Somee (esto es LO QUE FALTABA)
+// 🔌 Conexión a la base de datos
 builder.Services.AddDbContext<MangaDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("MangaDb")));
 
-// ✅ Registro del servicio Manga
+// 🧠 Servicios
 builder.Services.AddScoped<MangaService>();
+builder.Services.AddScoped<PrestamoService>();
 
-// 🎯 Controladores y Swagger
-builder.Services.AddControllers();
+// 🔐 JWT Authentication
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"] ?? ""))
+        };
+    });
+
+builder.Services.AddAuthorization();
+
+// 🌐 CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
+
+// 📦 Swagger con autenticación
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -23,26 +57,51 @@ builder.Services.AddSwaggerGen(options =>
         Description = "Una API para gestionar una increíble colección de mangas",
         Contact = new Microsoft.OpenApi.Models.OpenApiContact
         {
-            Name = "Tu Nombre/Equipo",
+            Name = "Tu Nombre o Equipo",
             Url = new Uri("https://tuwebsite.com")
+        }
+    });
+
+    options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Description = "Ingresa tu token JWT como: **Bearer tu_token_aqui**"
+    });
+
+    options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
         }
     });
 });
 
+builder.Services.AddControllers();
+
 var app = builder.Build();
 
-// 🚀 Configurar Swagger en desarrollo
+// 🚀 Middleware
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI(options =>
-    {
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "MangaBot API V1");
-        options.RoutePrefix = string.Empty;
-    });
+    app.UseSwaggerUI();
 }
 
+app.UseCors("AllowAll");
 app.UseHttpsRedirection();
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 

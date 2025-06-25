@@ -9,10 +9,8 @@ namespace JaveragesLibrary.Domain.Entities
         [Key]
         public int Id { get; set; }
 
-        public string? Titulo { get; set; } // antes era string sin ?
+        public string? Titulo { get; set; }
         public string? Autor { get; set; }
-        public int? Capitulos { get; set; } // si puede ser NULL, ponle ?
-
-        // Agrega solo lo que esté en tu base. Si no hay columnas extra, no pongas más.
+        public int? Capitulos { get; set; }
     }
 }

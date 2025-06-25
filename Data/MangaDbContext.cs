@@ -8,5 +8,6 @@ namespace JaveragesLibrary.Data
             : base(options) { }
 
         public DbSet<Manga> Mangas { get; set; }
+        public DbSet<Prestamo> Prestamos { get; set; }
     }
 }
